@@ -1,4 +1,3 @@
-
 # CartPole-v1 with Deep Q-Network (DQN)
 
 A PyTorch implementation of Deep Q-Network (DQN) for solving the CartPole-v1 environment from OpenAI Gymnasium. This project demonstrates reinforcement learning fundamentals with experience replay, target networks, and epsilon-greedy exploration with cosine annealing.
@@ -11,11 +10,17 @@ This implementation trains an agent to balance a pole on a moving cart using Dee
 
 ### Training Progress
 
-| Stage | Performance | Video |
-|-------|-------------|-------|
-| **Initially** | Random exploration, poor performance | ![Initial Training](imgs/initially.mp4) |
-| **Mid-Training** | Learning basic balancing strategies | ![Mid Training](imgs/mid-training.mp4) |
-| **After Training** | Optimal policy, consistent high scores | ![After Training](imgs/after-training.mp4) |
+**Initially** - Random exploration, poor performance
+
+https://github.com/ajheshbasnet/reinforcement-learning-agents/assets/your-user-id/initially.mp4
+
+**Mid-Training** - Learning basic balancing strategies
+
+https://github.com/ajheshbasnet/reinforcement-learning-agents/assets/your-user-id/mid-training.mp4
+
+**After Training** - Optimal policy, consistent high scores
+
+https://github.com/ajheshbasnet/reinforcement-learning-agents/assets/your-user-id/after-training.mp4
 
 ## Architecture
 
