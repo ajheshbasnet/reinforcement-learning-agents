@@ -12,15 +12,15 @@ This implementation trains an agent to balance a pole on a moving cart using Dee
 
 **Initially** - Random exploration, poor performance
 
-<video src="imgs/initially.mp4" controls></video>
+![initially](https://github.com/user-attachments/assets/initially.mp4)
 
 **Mid-Training** - Learning basic balancing strategies
 
-<video src="imgs/mid-training.mp4" controls></video>
+![mid-training](https://github.com/user-attachments/assets/mid-training.mp4)
 
 **After Training** - Optimal policy, consistent high scores
 
-<video src="imgs/after-training.mp4" controls></video>
+![after-training](https://github.com/user-attachments/assets/after-training.mp4)
 
 ## Architecture
 
