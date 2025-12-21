@@ -12,15 +12,15 @@ This implementation trains an agent to balance a pole on a moving cart using Dee
 
 **Initially** - Random exploration, poor performance
 
-![initially](https://github.com/user-attachments/assets/initially.mp4)
+![initially]([https://github.com/user-attachments/assets/](https://github.com/ajheshbasnet/reinforcement-learning-agents/tree/main/CartPole-DQN/imgs/initially.mp4)
 
 **Mid-Training** - Learning basic balancing strategies
 
-![mid-training](https://github.com/user-attachments/assets/mid-training.mp4)
+![mid-training]([https://github.com/user-attachments/assets/](https://github.com/ajheshbasnet/reinforcement-learning-agents/tree/main/CartPole-DQN/imgs/mid-training.mp4)
 
 **After Training** - Optimal policy, consistent high scores
 
-![after-training](https://github.com/user-attachments/assets/after-training.mp4)
+![after-training](https://github.com/ajheshbasnet/reinforcement-learning-agents/tree/main/CartPole-DQN/imgs/after-training.mp4)
 
 ## Architecture
 
