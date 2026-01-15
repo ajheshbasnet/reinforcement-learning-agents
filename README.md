@@ -1,53 +1,80 @@
 # Reinforcement Learning Agents
 
-a curated collection of advanced reinforcement learning (rl) agents and implementations, including **dqn, actor-critic, ppo, dpo**, and more. this repository provides reference code, algorithmic insights, and practical setups for experimentation, benchmarking, and research in rl.
+A curated collection of advanced reinforcement learning (RL) agents and implementations, built entirely from scratch using Python and first principles.
 
----
+## Overview
 
-## 📚 Table of Contents
+This repository contains clean, well-documented implementations of state-of-the-art RL algorithms, coded from the ground up to understand their core mechanisms, mathematical foundations, and practical applications. Each agent is implemented without relying on high-level abstractions, providing deep insights into how modern RL methods actually work.
 
-- [Overview](#overview)  
-- [Implemented Algorithms](#implemented-algorithms)  
-- [Installation](#installation)  
-- [Usage](#usage)  
-- [Contributing](#contributing)  
-- [References](#references)  
-- [License](#license)  
+## Implementations
 
----
+### Deep Q-Learning Methods
+- **CartPole-Double-DQN** - Double Deep Q-Network implementation for CartPole environment
+- **Pong-DQN** - Deep Q-Network agent for Atari Pong
 
-## 📝 Overview
+### Planned Implementations
+- **Actor-Critic Methods** - A2C, A3C variants
+- **Policy Gradient Methods** - REINFORCE, PPO, TRPO
+- **Deep Deterministic Policy Gradient** - DDPG and TD3
+- **Soft Actor-Critic** - SAC for continuous control
+- **Model-Based RL** - World models and planning algorithms
+- **Multi-Agent RL** - Cooperative and competitive scenarios
 
-this repository is designed for researchers, practitioners, and students aiming to understand, implement, and benchmark state-of-the-art rl methods. each agent implementation includes:
+## Project Structure
 
-- clean, modular, and extensible code  
-- support for standard environments (gym / custom)  
-- training and evaluation scripts  
-- logging and visualization utilities  
+Each implementation includes:
+- Agent architecture coded from scratch
+- Training loop and hyperparameters
+- Mathematical derivations and algorithmic insights
+- Experimental results and benchmarks
+- Visualization tools for understanding agent behavior
 
----
+## Key Features
 
-## 🔹 Implemented Algorithms
+**From-Scratch Implementation**: Every algorithm is built from first principles in Python, revealing the inner workings of RL methods.
 
-- **dqn (deep q-network)** – value-based rl agent  
-- **actor-critic** – policy-gradient + value function  
-- **ppo (proximal policy optimization)** – robust policy-gradient method  
-- **dpo (direct policy optimization)** – stable policy optimization  
-- **and more…** (contributions welcome)  
+**Algorithmic Clarity**: Code is written for understanding, with clear variable names, extensive comments, and structured logic flow.
 
----
+**Research-Ready**: Implementations serve as reference code for experimentation, modification, and research in RL.
 
-## ⚙️ Installation
+**Practical Setups**: Includes environment configurations, training scripts, and evaluation protocols for reproducible results.
 
-```bash
-# clone the repository
-git clone https://github.com/your-username/rl-agents.git
-cd rl-agents
+## Getting Started
 
-# create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # linux/mac
-venv\Scripts\activate     # windows
+Each agent implementation is self-contained within its respective directory. Navigate to the specific algorithm folder for:
+- Detailed setup instructions
+- Dependencies and requirements
+- Training commands and hyperparameter configurations
+- Usage examples and results
 
-# install dependencies
-pip install -r requirements.txt
+## Purpose
+
+This repository serves as:
+- A comprehensive learning resource for mastering RL algorithms at a fundamental level
+- Reference implementations for research, experimentation, and benchmarking
+- A foundation for developing novel RL methods and architectural modifications
+- A practical guide to training and debugging RL agents
+
+## Requirements
+
+- Python 3.8+
+- PyTorch or TensorFlow (varies by implementation)
+- Gymnasium (OpenAI Gym)
+- NumPy, Matplotlib for visualization
+- Additional dependencies listed in each subdirectory
+
+## Contributing
+
+Contributions are welcome. When adding new implementations, please:
+- Maintain code clarity and documentation standards
+- Include mathematical explanations where relevant
+- Provide training results and hyperparameter configurations
+- Follow the repository's structure and naming conventions
+
+## License
+
+Please refer to individual subdirectories for specific licensing information related to each implementation.
+
+## Acknowledgments
+
+These implementations are based on foundational research in reinforcement learning. Proper attribution to original papers and authors is maintained within each subdirectory.
