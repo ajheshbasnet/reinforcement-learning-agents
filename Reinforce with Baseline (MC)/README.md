@@ -214,8 +214,8 @@ pip install torch gymnasium wandb tqdm
 # Set your W&B API key inside wandb_runs()
 wandb.login(key="YOUR_API_KEY")
 
-# Run the notebook or script
-python reinforce_baseline.py
+# Run the notebook
+Run all the cell after switching to T4GPU so that the training happens bit quickly.
 ```
 
 Model weights are saved to `actor.pt` after training.
