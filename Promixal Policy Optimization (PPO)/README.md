@@ -95,7 +95,7 @@ Input (8,) → Linear(512) → ReLU → Linear(256) → ReLU → Output
 
 | Hyperparameter | Value | Role |
 |---|---|---|
-| `n_rollouts` | `25,000` | Number of full episode rollouts |
+| `n_rollouts` | `100,000` | Number of full episode rollouts |
 | `batch_size` | `96` | Mini-batch size for PPO epoch updates |
 | `actor_lr` | `1e-4` | AdamW LR for actor |
 | `critic_lr` | `1e-4` | AdamW LR for critic |
@@ -206,7 +206,7 @@ pip install swig "gymnasium[box2d]" torch wandb tqdm
 # Set your W&B API key inside wandb_runs()
 wandb.login(key="YOUR_API_KEY")
 
-python ppo_lunarlander.py
+clone the repo and simply choose the T4GPU and run all the notebool's cell.
 ```
 
 ### Evaluate with Video
