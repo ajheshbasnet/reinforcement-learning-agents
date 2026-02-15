@@ -1,287 +1,249 @@
-# PPO (Proximal Policy Optimization) - Atari Implementation
+# Proximal Policy Optimization (PPO) — LunarLander-v3
 
-A clean, single-environment Monte Carlo implementation of PPO for Atari games using PyTorch and Gymnasium.
-
----
-
-## Algorithm Overview
-
-**Proximal Policy Optimization (PPO)** is a policy gradient method that strikes a balance between sample efficiency and implementation simplicity. It belongs to the family of **actor-critic** algorithms and has become one of the most popular RL algorithms due to its stability and effectiveness.
-
-### Core Concept
-
-PPO solves a fundamental challenge in policy gradient methods: **how to safely update the policy without taking steps that are too large**. Large policy updates can catastrophically degrade performance, while overly conservative updates learn slowly.
-
-**The PPO Solution:**
-- Maintains **two policies**: a `currentPolicy` (being actively trained) and an `oldPolicy` (frozen reference)
-- Computes a **probability ratio** `r(θ) = π_new(a|s) / π_old(a|s)` between these policies for each action
-- **Clips** this ratio to prevent the new policy from deviating too far from the old one
-- This creates a "trust region" that keeps updates stable and prevents performance collapse
-
-### The PPO Clipped Objective
-
-```
-L(θ) = E[ min(r(θ) · A, clip(r(θ), 1-ε, 1+ε) · A) ]
-```
-
-**Where:**
-- **r(θ)** = π_currentPolicy(a|s) / π_oldPolicy(a|s) — ratio of action probabilities
-- **A** = Advantage (how much better an action was compared to the value baseline)
-- **ε** = clipping parameter (typically 0.2)
-- **clip(r, 1-ε, 1+ε)** restricts r to [0.8, 1.2]
-
-**Intuition:**
-- If advantage A > 0 (good action): increase probability, but not by more than 20%
-- If advantage A < 0 (bad action): decrease probability, but not by more than 20%
-- This prevents destructive updates while still allowing meaningful learning
-
-### Monte Carlo Returns
-
-This implementation uses **Monte Carlo (MC)** estimation:
-- Collects a **full episode** of experience before updating
-- Computes actual returns `G_t = r_t + γr_{t+1} + γ²r_{t+2} + ...` by working backwards from episode end
-- More accurate than bootstrapping methods, but requires waiting for episode completion
-- Well-suited for episodic tasks like Atari games
-
-### Actor-Critic Architecture
-
-**Two separate networks:**
-
-1. **Policy Network (Actor)**: 
-   - Outputs action probabilities for a given state
-   - Learns which actions to take
-   - Updated using the clipped PPO objective
-
-2. **Value Network (Critic)**:
-   - Estimates V(s), the expected future return from a state
-   - Provides a baseline to reduce variance in policy updates
-   - Updated using mean squared error between predicted and actual returns
-
-### Training Flow
-
-```
-For each episode:
-  1. Collect trajectory: (s_t, a_t, r_t, log_prob_t) using currentPolicy
-  2. Compute returns: G_t for each timestep (Monte Carlo)
-  3. Compute advantages: A_t = G_t - V(s_t)
-  4. Normalize advantages (improves stability)
-  5. Update currentPolicy using clipped PPO loss
-  6. Update ValueNetwork using MSE loss
-  7. Periodically sync oldPolicy ← currentPolicy
-```
+A clean PyTorch implementation of **Proximal Policy Optimization (PPO)** trained on the `LunarLander-v3` continuous control environment from OpenAI Gymnasium. The implementation covers the full PPO pipeline: GAE-based advantage estimation, clipped surrogate objective, entropy regularization, and mini-batch epoch updates — tracked end-to-end with Weights & Biases.
 
 ---
 
-## Configuration Parameters
+## Overview
 
-### Environment Settings
+| Property | Detail |
+|---|---|
+| **Algorithm** | Proximal Policy Optimization (PPO) |
+| **Environment** | `LunarLander-v3` (Gymnasium Box2D) |
+| **Advantage Estimation** | Generalized Advantage Estimation (GAE) |
+| **Policy Objective** | Clipped surrogate (PPO-Clip) |
+| **Entropy Regularization** | Yes — coefficient `0.001` |
+| **Update Style** | Full episode rollout → shuffled mini-batch epochs |
+| **Optimizer** | AdamW (separate actor and critic) |
+| **Experiment Tracking** | Weights & Biases (W&B) |
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `game_id` | `"RiverraidNoFrameskip-v4"` | Atari game identifier (can be changed to any Atari game) |
-| `max_step` | `5000` | Maximum steps per episode before truncation |
-| `stack_size` | `4` | Number of consecutive frames stacked as input (provides temporal information) |
+---
 
-**Why frame stacking?** 
-A single frame doesn't convey velocity or direction. Stacking 4 frames allows the agent to infer motion, crucial for games like Riverraid where you need to dodge moving obstacles.
+## Algorithm Design
 
-### Training Hyperparameters
+### Why PPO over vanilla Policy Gradient?
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `n_episodes` | `100,000` | Total number of episodes to train |
-| `policy_lr` | `3e-3` (0.003) | Learning rate for policy network (actor) |
-| `value_lr` | `2.5e-3` (0.0025) | Learning rate for value network (critic) |
-| `discount_factor` (γ) | `0.99` | Discount factor for future rewards (how much we value future vs immediate rewards) |
-| `epsilon` (ε) | `0.2` | PPO clipping parameter (limits policy change to ±20%) |
+Vanilla REINFORCE and A2C apply gradient updates that can be arbitrarily large. If the new policy deviates too far from the old one, the update destabilizes training — often catastrophically and irreversibly. PPO solves this by explicitly constraining how much the policy is allowed to change per update using a clipped probability ratio.
 
-**Learning rate choices:**
-- Slightly higher for policy (3e-3) because we want the actor to explore and adapt
-- Slightly lower for value (2.5e-3) because the critic should be more stable as a baseline
+### The Clipped Surrogate Objective
 
-**Discount factor (0.99):**
-- Close to 1.0 means we care about long-term rewards
-- Essential for Atari games where you need to plan ahead (e.g., avoiding obstacles that will arrive in future frames)
+After collecting a full episode rollout under the **old policy** (frozen `log_probs`), PPO reuses that data for multiple mini-batch updates. The ratio between the new and old policy is:
 
-### Update Frequencies
+$$r_t(\theta) = \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)} = \exp\!\left(\log\pi_\theta(a_t|s_t) - \log\pi_{\theta_{\text{old}}}(a_t|s_t)\right)$$
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `oldPolicy_updationStep` | `2000` | How often (in global steps) to update oldPolicy from currentPolicy |
-| `eval_steps` | `5000` | How often to run evaluation episodes (without exploration) |
-| `cam_counter` | `40,000` | How often to record video during evaluation |
-| `eval_loops` | `3` | Number of episodes to average for evaluation metrics |
+The clipped loss prevents this ratio from moving too far from 1 in either direction:
 
-**Why update oldPolicy every 2000 steps?**
-- Too frequent: policy ratio r(θ) stays near 1.0, limiting learning
-- Too rare: old and current policies diverge too much, clipping becomes ineffective
-- 2000 steps provides a good balance for Atari games
+$$\mathcal{L}^{\text{CLIP}}(\theta) = -\mathbb{E}_t\!\left[\min\!\left(r_t(\theta)\,A_t,\;\text{clip}(r_t(\theta),\,1-\varepsilon,\,1+\varepsilon)\,A_t\right)\right]$$
 
-### System Configuration
+where `ε = 0.2`. This means the policy update is clamped: if the ratio strays outside `[0.8, 1.2]`, the gradient contribution from that sample is zeroed out.
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `device` | `"cuda"` or `"cpu"` | Automatically uses GPU if available, otherwise CPU |
+### Entropy Regularization
+
+The full actor loss adds an entropy bonus to discourage premature convergence to a deterministic policy:
+
+$$\mathcal{L}^{\text{actor}}(\theta) = \mathcal{L}^{\text{CLIP}}(\theta) - \beta \cdot \mathbb{E}_t\!\left[\mathcal{H}[\pi_\theta(\cdot \mid s_t)]\right]$$
+
+where `β = 0.001`. Higher entropy = more exploration. The minus sign means maximizing entropy is achieved by minimizing the negative entropy term.
+
+### Generalized Advantage Estimation (GAE)
+
+Rather than using raw TD residuals or full Monte Carlo returns, PPO uses GAE to trade off bias vs. variance in the advantage estimate:
+
+$$\delta_t = r_t + \gamma \cdot V(s_{t+1}) \cdot (1 - d_t) - V(s_t)$$
+
+$$A_t^{\text{GAE}} = \sum_{l=0}^{T-t-1} (\gamma\lambda)^l \,\delta_{t+l}$$
+
+The recursion implemented in code (backwards pass):
+
+$$\text{gae} = \delta_t + \gamma \lambda (1 - d_t) \cdot \text{gae}_{t+1}$$
+
+With `γ = 0.99` and `λ = 0.96`:
+- Setting `λ = 0` recovers pure 1-step TD (low variance, high bias)
+- Setting `λ = 1` recovers full Monte Carlo returns (high variance, low bias)
+- `λ = 0.96` is a well-calibrated middle ground used widely in PPO literature
+
+### Value Target (Returns)
+
+$$\hat{R}_t = A_t^{\text{GAE}} + V(s_t)$$
+
+The critic is trained to regress toward these returns using MSE loss:
+
+$$\mathcal{L}^{\text{critic}} = \mathbb{E}_t\!\left[\left(V_\phi(s_t) - \hat{R}_t\right)^2\right]$$
 
 ---
 
 ## Network Architecture
 
-### Policy Network (Actor)
+Both actor and critic are independent MLPs. The actor outputs raw logits over the discrete action space; the critic outputs a scalar state value.
+
 ```
-Input: 4 × 84 × 84 (grayscale stacked frames)
-  ↓
-Conv2d(4→32, k=5, s=4) + ReLU
-  ↓
-Conv2d(32→64, k=4, s=3) + ReLU
-  ↓
-Conv2d(64→64, k=3, s=1) + ReLU
-  ↓
-Flatten to 1024
-  ↓
-Linear(1024→64) + ReLU
-Linear(64→64) + ReLU
-Linear(64→action_space)
-  ↓
-Output: Action logits → Softmax → Action probabilities
+Input (8,) → Linear(512) → ReLU → Linear(256) → ReLU → Output
 ```
 
-### Value Network (Critic)
-```
-Same convolutional layers as Policy Network
-  ↓
-Linear(1024→64) + ReLU
-Linear(64→64) + ReLU
-Linear(64→1)
-  ↓
-Output: Single value V(s)
-```
+| Network | Output | Head |
+|---|---|---|
+| Actor | `action_dim` logits → Categorical distribution | Discrete softmax |
+| Critic | Scalar `V(s)` | Linear (no activation) |
 
-**Architecture notes:**
-- Convolutional layers extract spatial features from game frames
-- Both networks share similar architecture but different final outputs
-- Policy outputs action probabilities, Value outputs a single scalar
-- Input normalization (x/255) converts pixel values from [0,255] to [0,1]
+**Parameter Count**
+- Actor: `8×512 + 512×256 + 256×4` = ~136k parameters
+- Critic: `8×512 + 512×256 + 256×1` = ~133k parameters
 
 ---
 
-## Key Implementation Details
+## Hyperparameters
 
-### Advantage Normalization
-```python
-At = (At - At.mean()) / (At.std() + 1e-5)
-```
-**Why?** Normalizing advantages to have mean=0 and std=1 prevents the scale of rewards from affecting learning dynamics. The 1e-5 prevents division by zero.
-
-### Probability Ratio Computation
-```python
-r = torch.exp(all_log_probs - oldPolicyProb)
-```
-**Why logarithms?** Working in log-space provides numerical stability. `exp(log_π_new - log_π_old) = π_new / π_old`
-
-### Frame Preprocessing
-- **Grayscale**: Reduces input from 3 channels (RGB) to 1, speeding up training
-- **Resize to 84×84**: Standard Atari preprocessing, balances detail with computational cost
-- **Frame skip=4**: Agent only sees every 4th frame, matches human reaction time
-- **Frame stacking**: Last 4 frames stacked to infer motion
+| Hyperparameter | Value | Role |
+|---|---|---|
+| `n_rollouts` | `25,000` | Number of full episode rollouts |
+| `batch_size` | `96` | Mini-batch size for PPO epoch updates |
+| `actor_lr` | `1e-4` | AdamW LR for actor |
+| `critic_lr` | `1e-4` | AdamW LR for critic |
+| `gamma` | `0.99` | Discount factor |
+| `lambda_` | `0.96` | GAE smoothing parameter |
+| `ppo_r_clamp` (ε) | `0.2` | PPO clip range |
+| `entropy_beta` (β) | `0.001` | Entropy regularization coefficient |
+| `eval_steps` | `10` | Evaluate every N rollouts |
+| `eval_loops` | `3` | Episodes averaged per evaluation |
+| `record_video` | `500,000` | Record video every N global steps |
 
 ---
 
-## Logging and Evaluation
+## W&B Training Logs
 
-**Weights & Biases (wandb) Integration:**
-- Tracks hyperparameters and metrics automatically
-- Logs training rewards, losses, and evaluation performance
-- Records videos of agent gameplay periodically
+All metrics are tracked live on Weights & Biases. The following metrics are logged per rollout:
 
-**Metrics tracked:**
-- `training-rewards`: Episode return during training
-- `actor-loss`: Policy network loss (clipped PPO objective)
-- `value-loss`: Value network loss (MSE)
-- `avg-eval_rewards`: Average reward over evaluation episodes
-- `eval-episodic-step`: Average episode length during evaluation
+| Metric | Logged When | Description |
+|---|---|---|
+| `training-reward` | Every rollout | Total undiscounted reward for the training episode |
+| `training-step` | Every rollout | Number of timesteps in the training episode |
+| `global-steps` | Every rollout | Total environment interaction steps |
+| `policy-loss` | Every rollout (avg over mini-batches) | Raw clipped surrogate loss, without entropy term |
+| `actor-loss` | Every rollout (avg over mini-batches) | Full actor loss = policy-loss − β·entropy |
+| `critic-loss` | Every rollout (avg over mini-batches) | MSE between critic output and GAE returns |
+| `entropy` | Every rollout (avg over mini-batches) | Mean policy entropy — should stay positive throughout |
+| `advantage` | Every rollout | Mean advantage across last mini-batch |
+| `eval-reward` | Every 10 rollouts | Avg reward over 3 greedy (argmax) eval episodes |
+| `eval-steps` | Every 10 rollouts | Avg episode length during evaluation |
+
+### Training Dashboard
+
+**Run 1 — Learning Curves**
+
+![W&B Run 1](static/wandb-1.png)
+
+**Run 2 — Learning Curves**
+
+![W&B Run 2](static/wandb-2.png)
+
+> The dashboards show training reward growth, policy and critic loss convergence, entropy decay, and evaluation reward across rollouts.
 
 ---
 
-## Usage
+## Training Loop — Step by Step
 
-### Prerequisites
+```
+For each of n_rollouts:
+
+  Phase 1 — Rollout Collection (no gradient)
+    1. Reset environment, collect full episode
+    2. At each step: sample action from Categorical(logits)
+    3. Store (s, a, r, s', done, log_prob_old)
+
+  Phase 2 — Advantage Computation (no gradient)
+    4. Compute V(s) and V(s') for all timesteps via critic
+    5. Compute TD residuals: δ_t = r_t + γ·V(s')·(1-done) − V(s)
+    6. Compute GAE advantages: backwards recursion over δ
+    7. Compute returns: R_t = A_t + V(s_t)
+    8. Normalize advantages: (A - mean) / (std + 1e-8)
+
+  Phase 3 — PPO Mini-batch Updates (with gradient)
+    9. Shuffle all timesteps randomly
+    10. For each mini-batch of size 96:
+         a. Recompute log_prob_new and entropy under current policy
+         b. Compute ratio = exp(log_prob_new - log_prob_old)
+         c. Compute clipped surrogate loss
+         d. Actor loss = clipped loss − β·entropy
+         e. Critic loss = MSE(V(s), returns)
+         f. Backward + AdamW step (actor and critic separately)
+
+  Phase 4 — Logging and Evaluation
+    11. Log averaged losses to W&B
+    12. Every 10 rollouts: run greedy evaluation (3 episodes)
+```
+
+---
+
+## Key Implementation Notes
+
+**Why separate optimizers for actor and critic?**
+Using independent AdamW instances means each network maintains its own first and second moment estimates. This allows the actor and critic to adapt at different effective rates even with identical nominal LRs, and prevents critic gradient noise from interfering with policy updates.
+
+**Why shuffle indices before mini-batch updates?**
+The rollout buffer contains temporally correlated transitions collected sequentially. Random shuffling before each mini-batch pass breaks these correlations, reducing the variance of gradient estimates and ensuring every part of the rollout contributes to the update regardless of episode structure.
+
+**Why freeze `log_probs` during collection?**
+The old log-probabilities `log_prob_old` are collected with `torch.no_grad()` during rollout and stored. These form the denominator of the probability ratio `r_t(θ)`. If they were recomputed during the update phase, the ratio would always be 1 — defeating the entire PPO clipping mechanism.
+
+**What does the entropy metric tell you?**
+A healthy PPO run shows entropy starting high (random policy) and gradually decreasing as the agent converges. If entropy collapses to near zero early in training, the policy is collapsing to a deterministic mode prematurely — often a sign that `entropy_beta` needs to be increased or the LR is too high.
+
+---
+
+## Getting Started
+
+### Install Dependencies
+
 ```bash
-pip install torch gymnasium ale-py wandb
+git clone https://github.com/ajheshbasnet/reinforcement-learning-agents.git
+cd "reinforcement-learning-agents/Promixal Policy Optimization (PPO)"
+pip install swig "gymnasium[box2d]" torch wandb tqdm
 ```
 
-### Setup
-1. Get your Weights & Biases API key from [wandb.ai](https://wandb.ai)
-2. Replace the placeholder in the code:
+### Train
+
 ```python
-wandb.login(key="YOUR_API_KEY_HERE")
+# Set your W&B API key inside wandb_runs()
+wandb.login(key="YOUR_API_KEY")
+
+python ppo_lunarlander.py
 ```
 
-### Run Training
-```bash
-python ppo_atari.py
-```
+### Evaluate with Video
 
-### Change Game
-Modify the `game_id` in the `configs` class:
 ```python
-game_id = "PongNoFrameskip-v4"  # or any other Atari game
+actornet.load_state_dict(torch.load("weights.pt"))
+evaluation(actornet, record_video=True)
+# Videos saved to videos/<timestamp>/
 ```
 
-Available games: Pong, Breakout, SpaceInvaders, MsPacman, Qbert, Seaquest, etc.
-
 ---
 
-## Why This Implementation Works
+## Project Structure
 
-**PPO's key advantages:**
-1. **Stable**: Clipping prevents destructive policy updates
-2. **Sample efficient**: Uses all collected data for updates (on-policy but reuses within epoch)
-3. **Simple**: No complex trust region constraints like TRPO
-4. **Effective**: State-of-the-art performance on many tasks
-
-**Monte Carlo approach:**
-- Accurate return estimates (no bootstrapping bias)
-- Works well for episodic tasks
-- Trade-off: requires full episode before learning (higher variance, lower bias)
-
----
-
-## Expected Performance
-
-- **Early training (0-10k steps)**: Random exploration, low rewards
-- **Mid training (10k-50k steps)**: Agent learns basic game mechanics
-- **Late training (50k+ steps)**: Agent develops strategies, rewards plateau
-
-Training time depends on:
-- Game complexity
-- Hardware (GPU recommended)
-- Episode length
-- Hyperparameter tuning
-
----
-
-## Common Issues & Solutions
-
-**Problem: Training is slow**
-- Solution: Ensure you're using GPU (`cuda`), reduce `eval_steps` frequency
-
-**Problem: Rewards not improving**
-- Solution: Try adjusting learning rates, epsilon value, or oldPolicy update frequency
-
-**Problem: Training unstable**
-- Solution: Decrease learning rates, ensure advantage normalization is working
+```
+Proximal Policy Optimization (PPO)/
+├── src
+|   └── PPO.ipynb
+├── weights/ policy-weights.pt              # Saved actor weights (post-training)
+├── videos/ 300 Reward.mp4                 # Recorded evaluation episodes
+└── static/
+    ├── wandb-1.png          # W&B dashboard — run 1
+    └── wandb-2.png          # W&B dashboard — run 2
+```
 
 ---
 
 ## References
 
-- [Proximal Policy Optimization Algorithms (Schulman et al., 2017)](https://arxiv.org/abs/1707.06347)
-- [OpenAI Spinning Up - PPO](https://spinningup.openai.com/en/latest/algorithms/ppo.html)
-- [Stable Baselines3 Documentation](https://stable-baselines3.readthedocs.io/)
+- Schulman et al. (2017) — [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
+- Schulman et al. (2015) — [High-Dimensional Continuous Control Using Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438)
 
 ---
 
-## License
+## Author
 
-MIT License - Feel free to use and modify for your projects!
+**Ajhesh Basnet**
+- GitHub: [@ajheshbasnet](https://github.com/ajheshbasnet)
+- Full Repository: [reinforcement-learning-agents](https://github.com/ajheshbasnet/reinforcement-learning-agents)
+- W&B Entity: `ajheshbasnet-kpriet`
