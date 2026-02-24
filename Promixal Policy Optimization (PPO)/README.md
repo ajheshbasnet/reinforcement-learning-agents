@@ -128,11 +128,11 @@ All metrics are tracked live on Weights & Biases. The following metrics are logg
 
 ### Training Dashboard
 
-**Run 1 — Learning Curves**
+**Learning Curves**
 
 ![W&B Run 1](static/wandb-1.png)
 
-**Run 2 — Learning Curves**
+**Learning Curves**
 
 ![W&B Run 2](static/wandb-2.png)
 
