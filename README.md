@@ -1,80 +1,105 @@
 # Reinforcement Learning Agents
 
-A curated collection of advanced reinforcement learning (RL) agents and implementations, built entirely from scratch using Python and first principles.
+A focused collection of standard RL algorithms, each implemented as a clean Jupyter notebook (`.ipynb`) — built for understanding, not abstraction. Every notebook runs end-to-end, logs metrics to Weights & Biases, and is written so the algorithm speaks for itself.
 
-## Overview
+---
 
-This repository contains clean, well-documented implementations of state-of-the-art RL algorithms, coded from the ground up to understand their core mechanisms, mathematical foundations, and practical applications. Each agent is implemented without relying on high-level abstractions, providing deep insights into how modern RL methods actually work.
+## Philosophy
+
+Most RL codebases bury the algorithm under layers of wrappers and utility classes. This repo does the opposite — each notebook is self-contained, linearly readable, and follows the same structure:
+
+> **Intuition → Math → Implementation → Training → Results**
+
+No base classes. No hidden logic. Just the algorithm.
+
+---
 
 ## Implementations
 
-### Deep Q-Learning Methods
-- **CartPole-Double-DQN** - Double Deep Q-Network implementation for CartPole environment
-- **Pong-DQN** - Deep Q-Network agent for Atari Pong
+| Algorithm | Environment | Notebook |
+|-----------|-------------|----------|
+| DQN | Atari Pong | `Pong-DQN/` |
+| Double DQN | CartPole | `CartPole-Double-DQN/` |
+| A2C | Gymnasium | `A2C/` |
+| PPO | Continuous Control | `Proximal Policy Optimization (PPO)/` |
+| Proximal PPO | Acrobot-v1 | `Proximal Policy Optimization - Acrobot/` |
+| DDPG | Continuous Control | `DDPG/` |
+| TD3 | Continuous Control | `TD3/` |
+| REINFORCE + Baseline | Gymnasium | `Reinforce with Baseline (MC)/` |
+| GRPO Fine-Tuning | LLM Fine-Tuning | `Group Relative Policy Optimization (GRPO)/` |
 
-### Planned Implementations
-- **Actor-Critic Methods** - A2C, A3C variants
-- **Policy Gradient Methods** - REINFORCE, PPO, TRPO
-- **Deep Deterministic Policy Gradient** - DDPG and TD3
-- **Soft Actor-Critic** - SAC for continuous control
-- **Model-Based RL** - World models and planning algorithms
-- **Multi-Agent RL** - Cooperative and competitive scenarios
+---
 
-## Project Structure
+## W&B Logging
 
-Each implementation includes:
-- Agent architecture coded from scratch
-- Training loop and hyperparameters
-- Mathematical derivations and algorithmic insights
-- Experimental results and benchmarks
-- Visualization tools for understanding agent behavior
+All notebooks log training metrics (rewards, losses, episode lengths) directly to [Weights & Biases](https://wandb.ai).
 
-## Key Features
+**Setup — one step:**
 
-**From-Scratch Implementation**: Every algorithm is built from first principles in Python, revealing the inner workings of RL methods.
+```python
+import wandb
+wandb.login(key="YOUR_WANDB_API_KEY")  # Get your key at https://wandb.ai/authorize
+```
 
-**Algorithmic Clarity**: Code is written for understanding, with clear variable names, extensive comments, and structured logic flow.
+Replace `YOUR_WANDB_API_KEY` with your key from [wandb.ai/authorize](https://wandb.ai/authorize). That's it — metrics stream automatically once training starts.
 
-**Research-Ready**: Implementations serve as reference code for experimentation, modification, and research in RL.
+Each notebook initializes its own `wandb.init(project=..., config=...)` run. You'll see reward curves, loss plots, and hyperparameter sweeps live in your W&B dashboard.
 
-**Practical Setups**: Includes environment configurations, training scripts, and evaluation protocols for reproducible results.
+---
 
-## Getting Started
+## Running a Notebook
 
-Each agent implementation is self-contained within its respective directory. Navigate to the specific algorithm folder for:
-- Detailed setup instructions
-- Dependencies and requirements
-- Training commands and hyperparameter configurations
-- Usage examples and results
+Each directory is self-contained. Navigate to any algorithm folder and open the `.ipynb`:
 
-## Purpose
+```bash
+cd "Proximal Policy Optimization (PPO)"
+jupyter notebook ppo.ipynb
+```
 
-This repository serves as:
-- A comprehensive learning resource for mastering RL algorithms at a fundamental level
-- Reference implementations for research, experimentation, and benchmarking
-- A foundation for developing novel RL methods and architectural modifications
-- A practical guide to training and debugging RL agents
+Install dependencies:
+
+```bash
+pip install torch gymnasium wandb numpy matplotlib
+```
+
+> Some environments (Atari, MuJoCo) need additional setup — see the `README` inside each subdirectory.
+
+---
+
+## Repository Structure
+
+```
+reinforcement-learning-agents/
+├── CartPole-Double-DQN/
+├── Pong-DQN/
+├── A2C/
+├── DDPG/
+├── TD3/
+├── Proximal Policy Optimization (PPO)/
+├── Proximal Policy Optimization - Acrobot/
+├── Reinforce with Baseline (MC)/
+├── Group Relative Policy Optimization (GRPO)/
+└── README.md
+```
+
+---
 
 ## Requirements
 
 - Python 3.8+
-- PyTorch or TensorFlow (varies by implementation)
-- Gymnasium (OpenAI Gym)
-- NumPy, Matplotlib for visualization
-- Additional dependencies listed in each subdirectory
+- PyTorch
+- Gymnasium
+- Weights & Biases (`wandb`)
+- NumPy, Matplotlib
+
+---
 
 ## Contributing
 
-Contributions are welcome. When adding new implementations, please:
-- Maintain code clarity and documentation standards
-- Include mathematical explanations where relevant
-- Provide training results and hyperparameter configurations
-- Follow the repository's structure and naming conventions
+New implementations should follow the same notebook format: intuition first, then derivation, then clean code. Include W&B logging and a short results section at the end of the notebook.
 
-## License
+---
 
-Please refer to individual subdirectories for specific licensing information related to each implementation.
+## References
 
-## Acknowledgments
-
-These implementations are based on foundational research in reinforcement learning. Proper attribution to original papers and authors is maintained within each subdirectory.
+Implementations follow the original papers. Citations are included at the top of each notebook.
